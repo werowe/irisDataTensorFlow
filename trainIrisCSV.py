@@ -4,46 +4,41 @@ FIELD_DEFAULTS = [[0.0], [0.0], [0.0], [0.0], [0]]
 
 
 def _parse_line(line):
+    print(line)
     fields = tf.decode_csv(line, FIELD_DEFAULTS)
     features = dict(zip(COLUMNS,fields))
     label = features.pop('label')
 
     return features, label
  
-CSV_COLUMN_NAMES = ['SepalLength', 'SepalWidth',
-                    'PetalLength', 'PetalWidth', 'Species']  
-
-CSV_TYPES = [[0.0], [0.0], [0.0], [0.0], [0]]
-
-
-COLUMNS = ['SepalLength', 'SepalWidth',
-           'PetalLength', 'PetalWidth',
-           'label']
-
-FIELD_DEFAULTS = [[0.0], [0.0], [0.0], [0.0], [0]]
+feature_names = [
+    'SepalLength',
+    'SepalWidth',
+    'PetalLength',
+    'PetalWidth']
 
 
-def _parse_line(line):
-    fields = tf.decode_csv(line, record_defaults=CSV_TYPES)
-    features = dict(zip(CSV_COLUMN_NAMES, fields))
-    label = features.pop('Species')
-    return features, label
+def parse_line(line):
+     parsed_line = tf.decode_csv(line, [[0.], [0.], [0.], [0.], [0]])
+     label = parsed_line[-1]  # Last element is the label
+     del parsed_line[-1]  # Delete last element
+     features = parsed_line  
+     d = dict(zip(feature_names, features)), label
+     return d
 
 def csv_input_fn(csv_path, batch_size):
     dataset = tf.data.TextLineDataset(csv_path).skip(1)
-    dataset = dataset.map(_parse_line)
+    dataset = dataset.map(parse_line)
     dataset = dataset.shuffle(1000).repeat().batch(batch_size)
     return dataset
 
-ds = tf.data.TextLineDataset("iris_training.csv").skip(1)
-
-ds = ds.map(_parse_line)
-print(ds)
-
-feature_columns = COLUMNS
+ds = tf.data.TextLineDataset("iris_training.csv") 
+ 
+feature_columns = [tf.feature_column.numeric_column(k) for k in feature_names]
 
 est = tf.estimator.LinearClassifier(feature_columns,
                                     n_classes=3)
+
 
 train_path="iris_training.csv"
 
